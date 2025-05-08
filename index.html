@@ -11,7 +11,7 @@
 
     <!-- <link rel="stylesheet" type="text/css" href="Mobile_styles_01.css" /> -->
     <style>
-      :root {
+        :root {
         --background-color: #333;
         --text-color: #b6b6b6;
         --slider-color: #666;
@@ -340,6 +340,7 @@
       .add_BM,
       .play_from,
       .set_timer,
+      .abort_timer,
       .choose_button,
       .BM_save,
       .BM_load,
@@ -373,6 +374,7 @@
       .add_BM:hover,
       .play_from:hover,
       .set_timer:hover,
+      .abort_timer:hover,
       .BM_save:hover,
       .BM_load:hover,
       .fullscreen_button:hover,
@@ -572,7 +574,27 @@
       #playPauseButton {
         display: none;
       }
-
+      .file-input-div {
+        transition: all 0.2s ease-out;
+      }
+      .file-input-div:hover {
+        background-color: #0b552b;
+        transform: scale(1.1);
+      }
+      #timerDisplay {
+        position: fixed;
+        top: 0em;
+        left: 0em;
+        padding: 0.5em;
+        padding-inline: 1em;
+        margin: 0em;
+        margin-left: 2em;
+        border: none;
+        color: var(--text-color);
+        font-weight: bold;
+        opacity: 50%;
+      }
+      
       /*----    Media Query for css changes for Portrait screens-----*/
       @media (max-aspect-ratio: 1/1) {
             #selectAudio-text {display: none;}
@@ -675,6 +697,20 @@
               fill: #e3e3e3; */
     
             }
+            #timerDisplay {
+                position: fixed;
+                top: 0em;
+                left: 50%;
+                transform: translateX(-50%);
+                padding: 0.5em;
+                padding-inline: 1em;
+                margin: 0em;
+                /* margin-left: 2em; */
+                border: none;
+                color: var(--text-color);
+                font-weight: normal;
+                opacity: 50%;
+            }
             /* .HS_MasterPanel{
               position: fixed;
               top: 0;
@@ -703,6 +739,7 @@
   </head>
   <body>
     <h1 class="h1_title" id="mainTitle">Audiobook Player</h1> <!--Audio Book Player-->
+    <span id="timerDisplay">00:00</span>
     <button onclick="toggle_full_screen()" class="fullscreen_button">
       <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e3e3e3"><path d="M120-120v-200h80v120h120v80H120Zm520 0v-80h120v-120h80v200H640ZM120-640v-200h200v80H200v120h-80Zm640 0v-120H640v-80h200v200h-80Z"/>
       </svg>
@@ -745,7 +782,8 @@
       <div id="timerpanel-div">
         <input type="number" id="minuteTimer" min="0" max="59" step="1" class="text_field" placeholder="MM:">
         <input type="number" id="secondTimer" min="0" max="59" step="1" class="text_field"placeholder="SS:">
-        <button class="set_timer" onclick="setTimer()">Set Timer</button>
+        <button class="set_timer" id="setTimer">Set Timer</button>
+        <button class="abort_timer" id="abortTimer">Abort Timer</button>
       </div>
       
       
@@ -1795,8 +1833,8 @@
           console.log("time is: "+inactivityTime);
           resetTimer();
           // Event listeners for mouse movement and keyboard activity
-          document.addEventListener("mousemove", resetTimer);
-          document.addEventListener("keydown", resetTimer);
+          // document.addEventListener("mousemove", resetTimer);
+          // document.addEventListener("keydown", resetTimer);
 
         }
 
@@ -1828,6 +1866,82 @@
           }
         }
       
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+        let timerInterval = null;
+        let remainingSeconds = 0;
+
+        //const audioFileInput = document.getElementById("audioFile");
+        const minutesInput = document.getElementById("minuteTimer");
+        const secondsInput = document.getElementById("secondTimer");
+        const setTimerBtn = document.getElementById("setTimer");
+        const abortTimerBtn = document.getElementById("abortTimer");
+        const timerDisplay = document.getElementById("timerDisplay");
+        //const audio = document.getElementById("audio");
+
+        function formatTime(sec) {
+            const m = String(Math.floor(sec / 60)).padStart(2, "0");
+            const s = String(sec % 60).padStart(2, "0");
+            return `${m}:${s}`;
+        }
+
+        function updateDisplay() {
+            timerDisplay.textContent = formatTime(remainingSeconds);
+        }
+
+        function stopTimer() {
+            //x.pause(); // Only pause, do NOT reset currentTime
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+
+        function startTimer(totalSeconds) {
+            remainingSeconds = totalSeconds;
+            updateDisplay();
+            x.play();
+            timerInterval = setInterval(() => {
+                remainingSeconds--;
+                updateDisplay();
+                if (remainingSeconds <= 0) {
+                    x.pause();
+                    stopTimer();
+                    
+                    setTimeout(() => {
+                        if (confirm("Timer finished! Restart?")) {
+                            setTimerBtn.click();
+                        } else {
+                            timerDisplay.textContent = "00:00";
+                            x.play();
+                        }
+                    }, 100);
+                }
+            }, 1000);
+        }
+
+        setTimerBtn.addEventListener("click", () => {
+            if (!x.src) {
+                alert("Please select an audio file first!");
+                return;
+            }
+            const min = parseInt(minutesInput.value, 10) || 0;
+            const sec = parseInt(secondsInput.value, 10) || 0;
+            const total = min * 60 + sec;
+            if (total > 0) {
+                stopTimer(); // Only pause, do not reset audio
+                startTimer(total);
+            } else {
+                alert("Please enter a valid timer duration.");
+            }
+        });
+
+        abortTimerBtn.addEventListener("click", () => {
+            stopTimer(); // Only pause, do not reset audio
+            updateDisplay();
+            timerDisplay.textContent = "00:00";
+        });
+
+        // Initialize display
+        updateDisplay();
 //------------------------------------------------------------------------------------------------
 
 
